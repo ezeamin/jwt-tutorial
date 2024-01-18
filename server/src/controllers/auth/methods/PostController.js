@@ -42,7 +42,7 @@ export class PostController {
 
       // 3- Generate JWT
       // Everything is correct, generate JWT
-      // We remove the password and isActive from the user object,
+      // We remove the password from the user object,
       // so that it doesn´t get sent to the FE
       const userInfo = {
         user: {
@@ -67,7 +67,7 @@ export class PostController {
         secure: true,
       });
       res.json({
-        data: { token: accessToken },
+        data: { accessToken },
         message: 'Login OK',
       });
     } catch (err) {
@@ -85,6 +85,7 @@ export class PostController {
     try {
       // delete refreshToken cookie
       res.clearCookie('refresh_token', {
+        httpOnly: true,
         sameSite: 'none',
         secure: true,
       });
@@ -99,6 +100,51 @@ export class PostController {
           data: null,
           message: `ERROR: ${err}`,
         },
+      });
+    }
+  }
+
+  static async refreshToken(req, res) {
+    const {
+      cookies: { refresh_token: refreshToken },
+    } = req;
+
+    try {
+      if (!refreshToken) throw new Error('No refresh token found');
+
+      // 1- Validate JWT
+      // (payload, secretKey, options)
+      const { user } = jwt.verify(refreshToken, JWT_SECRET_KEY);
+
+      const userInfo = { user };
+
+      // 2- Generate new JWT
+      // (payload, secretKey, options)
+      const accessToken = jwt.sign(userInfo, JWT_SECRET_KEY, {
+        expiresIn: '1h',
+      });
+      const newRefreshToken = jwt.sign(userInfo, JWT_SECRET_KEY, {
+        expiresIn: '2h',
+      });
+
+      // 3- Send JWT to FE
+      res.cookie('refresh_token', newRefreshToken, {
+        expires: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        httpOnly: true,
+        sameSite: 'none',
+        secure: true,
+      });
+      res.json({
+        data: { accessToken },
+        message: 'Refresh OK',
+      });
+    } catch (err) {
+      console.error('🟥', err);
+      // delete refreshToken cookie
+      res.clearCookie('refresh_token');
+      res.status(HttpStatus.UNAUTHORIZED).json({
+        data: null,
+        message: null,
       });
     }
   }

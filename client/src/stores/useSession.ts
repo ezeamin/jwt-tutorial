@@ -52,7 +52,7 @@ export const useSession = create<SessionStore>((set) => ({
       if (!res.ok) throw new Error();
 
       const {
-        data: { token: accessToken },
+        data: { accessToken },
       } = await res.json();
 
       if (!accessToken) throw new Error();
@@ -69,14 +69,14 @@ export const useSession = create<SessionStore>((set) => ({
   refreshToken: async () => {
     // We don't handle error logging here because its common that this returns a 401
     const res = await fetch(`${baseUrl}/auth/refresh-token`, {
-      method: 'GET',
+      method: 'POST',
       credentials: 'include',
     });
 
     if (res.status === 401) return;
 
     const {
-      data: { token: accessToken },
+      data: { accessToken },
     } = await res.json();
 
     if (!accessToken) return;
